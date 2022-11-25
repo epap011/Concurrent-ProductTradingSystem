@@ -1,3 +1,8 @@
+//TODO:
+//Understand Barrier
+//Thread id should be from gettid or for-loop counter?
+//Why N=2 sometimes produce 2 items instead of 4 ?
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -16,6 +21,12 @@ struct Product {
     struct Product *prev;
 };
 
+struct ThreadProducerData {
+    pthread_barrier_t *barrier;
+    int number_of_products;
+    int thread_id;
+};
+
 /*Function Declarations*/
 void listInsert(struct Product *product);
 struct ProductList* createProductList();
@@ -23,13 +34,17 @@ struct Product* createProduct();
 void *insertAllProductsAtList();
 void listDelete();
 void printProductList();
+void productListSumCheck(int N);
+void productListSizeCheck(int N);
 
 /*Shared Variables*/
 volatile struct ProductList *product_list;
 volatile struct Product     *product;
 
 int main() {
-    pthread_t* producer_thread_ids;
+    pthread_t *producer_thread_ids;
+    pthread_barrier_t barrier;
+    struct ThreadProducerData *thread_producer_data;
     int N;
 
     printf("Enter N: ");
@@ -38,15 +53,22 @@ int main() {
     producer_thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
     product_list        = createProductList();
 
+    pthread_barrier_init(&barrier, NULL, N);
+
     for(int i = 0; i < N; i++) {
-        pthread_create(&producer_thread_ids[i], NULL, insertAllProductsAtList, (void *)&N);
+        thread_producer_data = (struct ThreadProducerData *)malloc(sizeof(struct ThreadProducerData));
+        thread_producer_data->barrier = &barrier;
+        thread_producer_data->number_of_products = N;
+        thread_producer_data->thread_id = i;
+        pthread_create(&producer_thread_ids[i], NULL, insertAllProductsAtList, (void *)thread_producer_data);
     }
+
     for(int i = 0; i < N; i++) {
         pthread_join(producer_thread_ids[i], NULL);
     }
 
+    pthread_barrier_destroy(&barrier);
     printProductList();
-
 }
 
 /*Creates a product list with head and tail pointing to a sentinel node(product)
@@ -82,13 +104,20 @@ struct Product* createProduct(int productID) {
 }
 
 /*Creates a number (N) of products and insert them at the list*/
-void* insertAllProductsAtList(void* number_of_products) {
+void* insertAllProductsAtList(void* thread_producer_data) {
     struct Product *product;
-    int N = *(int*)number_of_products;
+    int N   = ((struct ThreadProducerData*)thread_producer_data)->number_of_products;
+    int tid = ((struct ThreadProducerData*)thread_producer_data)->thread_id;
 
     for(int i = 0; i < N; i++) {
-        product = createProduct(i*N+gettid());
+        product = createProduct(i*N+tid);
         listInsert(product);
+    }
+
+    pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->barrier);
+    if(tid == 0) {
+        productListSizeCheck(N);
+        productListSumCheck(N);
     }
 }
 
@@ -157,8 +186,35 @@ void listDelete() {
     
 }
 
+void productListSizeCheck(int N) {
+    struct Product *curr;
+    int counter = 0;
+
+    curr = product_list->head;
+    while(curr != NULL) {
+        counter++;        
+        curr = curr->next;
+    }
+    printf("List size check (expected: %d , found: %d)\n", N*N, counter-1);
+}
+
+void productListSumCheck(int N) {
+    struct Product *curr;
+    int sum = 0;
+
+    curr = product_list->head;
+    while(curr != NULL) {
+        sum += curr->productID;
+        curr = curr->next;
+    }
+    printf("List size check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, sum+1);
+}
+
 void printProductList() {
     struct Product *curr;
+
+    printf("Head: %d\n", product_list->head->productID);
+    printf("Tail: %d\n", product_list->tail->productID);
 
     curr = product_list->head;
     while(curr != NULL) {
