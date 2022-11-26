@@ -75,14 +75,20 @@ int main() {
   If no errors occured while creating the list or the product, the list will be returned*/
 struct ProductList* createProductList() {
     struct ProductList *product_list;
-    struct Product     *sentinel_product;
+    struct Product     *head_sentinel_product, *tail_sentinel_product;
 
     product_list = (struct ProductList*)malloc(sizeof(struct ProductList));
     assert(product_list != NULL);
 
-    sentinel_product   = createProduct(-1);
-    product_list->head = sentinel_product;
-    product_list->tail = sentinel_product;
+    /*creating 2 sentinel nodes*/
+    head_sentinel_product   = createProduct(-1);
+    product_list->head      = head_sentinel_product;
+
+    tail_sentinel_product   = createProduct(-1);
+    product_list->tail      = tail_sentinel_product;
+
+    head_sentinel_product->next = tail_sentinel_product;
+    tail_sentinel_product->prev = head_sentinel_product;
 
     return product_list;
 }
@@ -112,6 +118,7 @@ void* insertAllProductsAtList(void* thread_producer_data) {
     for(int i = 0; i < N; i++) {
         product = createProduct(i*N+tid);
         listInsert(product);
+        printf("%d\n", product->productID);
     }
 
     pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->barrier);
@@ -130,19 +137,7 @@ void listInsert(struct Product *product) {
         perror("Error: pthread_mutex_lock failed!");
         exit(1);
     }
-
-    if(product_list->head->next == NULL) { /*first product case*/
-        product_list->head->next = product;
-        product_list->tail = product;
-        product->next = NULL;
-        product->prev = product_list->head;
-        if(pthread_mutex_unlock(&product_list->head->lock) != 0) {
-            perror("Error: pthread_mutex_unlock failed!");
-            exit(1);
-        }
-        return;
-    }
-
+    
     prev = product_list->head;
     curr = prev->next;
     
@@ -164,12 +159,13 @@ void listInsert(struct Product *product) {
         }
     }
 
-    if(curr->productID == product->productID) result = 0;
-    else {
-        product->next = curr;
-        prev->next    = product;
-        result        = 1;
-    }
+        if(curr->productID == product->productID) result = 0;
+        else {
+            product->next = curr;
+            product->prev = prev;
+            prev->next    = product;
+            result        = 1;
+        }
 
     if(pthread_mutex_unlock(&prev->lock) != 0) {
         perror("Error: pthread_mutex_unlock failed!");
@@ -195,7 +191,7 @@ void productListSizeCheck(int N) {
         counter++;        
         curr = curr->next;
     }
-    printf("List size check (expected: %d , found: %d)\n", N*N, counter-1);
+    printf("List size check (expected: %d , found: %d)\n", N*N, counter-2); /*don't count sentinel nodes*/
 }
 
 void productListSumCheck(int N) {
@@ -207,13 +203,13 @@ void productListSumCheck(int N) {
         sum += curr->productID;
         curr = curr->next;
     }
-    printf("List size check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, sum+1);
+    printf("List size check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, sum+2); /*sentinel nodes sum should be removed (-2 + 2 == 0)*/
 }
 
 void printProductList() {
     struct Product *curr;
 
-    printf("Head: %d\n", product_list->head->productID);
+    printf("\nHead: %d\t", product_list->head->productID);
     printf("Tail: %d\n", product_list->tail->productID);
 
     curr = product_list->head;
