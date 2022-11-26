@@ -45,7 +45,7 @@ struct DLLNode* createDLLNode(int productID) {
 }
 
 /*Insert a product at the product list to the right position*/
-void listInsert(struct DoubleLinkedList *dll, struct DLLNode *node) {
+int listInsert(struct DoubleLinkedList *dll, struct DLLNode *node) {
     struct DLLNode *prev, *curr;
     int result;
 
@@ -75,13 +75,14 @@ void listInsert(struct DoubleLinkedList *dll, struct DLLNode *node) {
         }
     }
 
-        if(curr->productID == node->productID) result = 0;
-        else {
-            node->next = curr;
-            node->prev = prev;
-            prev->next = node;
-            result     = 1;
-        }
+    if(curr->productID == node->productID) result = 0;
+    else {
+        node->next = curr;
+        node->prev = prev;
+        prev->next = node;
+        curr->prev = node;
+        result     = 1;
+    }
 
     if(pthread_mutex_unlock(&prev->lock) != 0) {
         perror("Error: pthread_mutex_unlock failed!");
@@ -91,6 +92,57 @@ void listInsert(struct DoubleLinkedList *dll, struct DLLNode *node) {
         perror("Error: pthread_mutex_unlock failed!");
         exit(1);
     }
+    return result;
+}
+
+int listDelete(struct DoubleLinkedList *dll, int productID) {
+    struct DLLNode *prev, *curr;
+    int result;
+
+    if(pthread_mutex_lock(&dll->head->lock) != 0) {
+        perror("Error: pthread_mutex_lock failed!");
+        exit(1);
+    }
+    
+    prev = dll->head;
+    curr = prev->next;
+    
+    if(pthread_mutex_lock(&curr->lock) != 0) {
+        perror("Error: pthread_mutex_lock failed!");
+        exit(1);
+    }
+
+    while(curr->next != NULL && curr->productID < productID) {
+        if(pthread_mutex_unlock(&prev->lock) != 0) {
+            perror("Error: pthread_mutex_unlock failed!");
+            exit(1);
+        }
+        prev = curr;
+        curr = curr->next;
+        if(pthread_mutex_lock(&curr->lock) != 0) {
+            perror("Error: pthread_mutex_lock failed!");
+            exit(1);
+        }
+    }
+
+    if(curr->productID == productID) {
+        prev->next       = curr->next;
+        curr->next->prev = prev;
+        result           = 1;
+    }
+    else {
+        result = 0;
+    }
+
+    if(pthread_mutex_unlock(&prev->lock) != 0) {
+        perror("Error: pthread_mutex_unlock failed!");
+        exit(1);
+    }
+    if(pthread_mutex_unlock(&curr->lock) != 0) {
+        perror("Error: pthread_mutex_unlock failed!");
+        exit(1);
+    }
+    return result;
 }
 
 int DLLSize(struct DoubleLinkedList *dll) {

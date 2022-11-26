@@ -16,8 +16,8 @@ struct DLLNode {
 
 struct DoubleLinkedList* createDLL();
 struct DLLNode* createDLLNode(int productID);
-void listInsert(struct DoubleLinkedList *dll, struct DLLNode *node);
-void listDelete(int productID);
+int listInsert(struct DoubleLinkedList *dll, struct DLLNode *node);
+int listDelete(struct DoubleLinkedList *dll, int productID);
 int DLLSize(struct DoubleLinkedList *dll);
 int DLLProductIdSum(struct DoubleLinkedList *dll);
 void printDLL(struct DoubleLinkedList *dll);
