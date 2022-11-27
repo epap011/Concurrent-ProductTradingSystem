@@ -7,10 +7,12 @@ struct HTNode {
     pthread_mutex_t lock;
 };
 
-int HTInsert();
+int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* bucket);
 int HTDelete();
 int HTSearch();
-void printHT();
+int HTSize(struct HTNode** hash_table);
+int HTProductIDSum(struct HTNode** hash_table);
+void printHT(struct HTNode** hash_table, int size);
 struct HTNode** createHT(int size);
 struct HTNode* createHTNode(int productID);
 
