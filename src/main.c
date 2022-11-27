@@ -114,7 +114,6 @@ void* insertAllProductsAtHashTable(void* thread_data) {
     int j = 0;
     for(int i = 0; i < N; i++) {
         product = createHTNode(tid*N+i);
-        printf("thread %d put the item %d item at hash table %d\n", tid, tid*N+i, j%(N/3));
         HTInsert(consumer_hash_tables[j%(N/3)], 4*N, product);
         j++;
     }
@@ -123,7 +122,7 @@ void* insertAllProductsAtHashTable(void* thread_data) {
 
     if(tid == 0) {
         HTVerification(N);
-        printAllHashTables(N/3, 4*N);
+        //printAllHashTables(N/3, 4*N);
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
     } else {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
@@ -142,11 +141,11 @@ void HTVerification(int N) {
     int total_sum = 0;
 
     for(int i = 0; i < N/3; i++) {
-        printf("HT[%d] size check (expected: %d , found: %d)\n", i, 3*N, HTSize(consumer_hash_tables[i]));
+        printf("HT[%d] size check (expected: %d , found: %d)\n", i, 3*N, HTSize(consumer_hash_tables[i], 4*N));
     }
 
     for(int i = 0; i < N/3; i++) {
-        total_sum += HTProductIDSum(consumer_hash_tables[i]);
+        total_sum += HTProductIDSum(consumer_hash_tables[i], 4*N);
     }
     printf("HT    sum  check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, total_sum);
 }

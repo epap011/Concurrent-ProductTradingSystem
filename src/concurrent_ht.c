@@ -54,7 +54,6 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_
             perror("Error: pthread_mutex_lock failed!");
             exit(1);
         }
-        printf("key to insert: %d | hash_table[%d]: %d\n", key, curr, hash_table[curr]->productID);
     }
     
     hash_table[curr]->productID = key;
@@ -82,15 +81,23 @@ int hash_1(int key, int table_size) {
 }
 
 int hash_2(int key, int table_size) {
-    return 23 - (key%23);
+    return table_size - (key%table_size);
 }
 
-int HTSize(struct HTNode** hash_table) {
-    return 0;
+int HTSize(struct HTNode** hash_table, int size) {
+    int counter = 0;
+    for(int i = 0; i < size; i++) {
+        if(hash_table[i]->productID != -1) counter++;
+    }
+    return counter;
 }
 
-int HTProductIDSum(struct HTNode** hash_table) {
-    return 0;
+int HTProductIDSum(struct HTNode** hash_table, int size) {
+    int sum = 0;
+    for(int i = 0; i < size; i++) {
+        if(hash_table[i]->productID != -1) sum+=hash_table[i]->productID;
+    }
+    return sum;
 }
 
 void printHT(struct HTNode** hash_table, int size) {

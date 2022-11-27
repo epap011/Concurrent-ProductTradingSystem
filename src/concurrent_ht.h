@@ -10,8 +10,8 @@ struct HTNode {
 int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* bucket);
 int HTDelete();
 int HTSearch();
-int HTSize(struct HTNode** hash_table);
-int HTProductIDSum(struct HTNode** hash_table);
+int HTSize(struct HTNode** hash_table, int size);
+int HTProductIDSum(struct HTNode** hash_table, int size);
 void printHT(struct HTNode** hash_table, int size);
 struct HTNode** createHT(int size);
 struct HTNode* createHTNode(int productID);
