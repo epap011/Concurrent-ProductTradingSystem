@@ -185,8 +185,8 @@ int HTSize(struct HTNode** hash_table, int size) {
     return counter;
 }
 
-int HTProductIDSum(struct HTNode** hash_table, int size) {
-    int sum = 0;
+long long int HTProductIDSum(struct HTNode** hash_table, int size) {
+    long long int sum = 0;
     for(int i = 0; i < size; i++) {
         if(hash_table[i]->productID != -1) sum+=hash_table[i]->productID;
     }

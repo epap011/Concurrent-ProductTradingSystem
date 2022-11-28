@@ -201,9 +201,9 @@ int DLLSize(struct DoubleLinkedList *dll) {
     return counter-2;
 }
 
-int DLLProductIdSum(struct DoubleLinkedList *dll) {
+long long int DLLProductIdSum(struct DoubleLinkedList *dll) {
     struct DLLNode *curr;
-    int sum = 0;
+    long long int sum = 0;
 
     curr = dll->head;
     while(curr != NULL) {

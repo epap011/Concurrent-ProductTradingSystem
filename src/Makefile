@@ -5,8 +5,8 @@ CC = gcc
 #compiler flags
 CFLAGS = -Wall
 
-exec: main.o concurrent_dll.o concurrent_ht.o
-	$(CC) $(CFLAGS) main.o concurrent_dll.o concurrent_ht.o -o a.out
+exec: main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o
+	$(CC) $(CFLAGS) main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o -o a.out
 
 main.o:	main.c
 	$(CC) $(CFLAGS) -c main.c
@@ -16,6 +16,9 @@ concurrent_dll.o: concurrent_dll.c
 
 concurrent_ht.o: concurrent_ht.c
 	$(CC) $(CFLAGS) -c concurrent_ht.c
+
+concurrent_stack.o:	concurrent_stack.c
+	$(CC) $(CFLAGS) -c concurrent_stack.c
 
 clean:
 	rm -rf *o a.out

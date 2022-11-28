@@ -1,18 +1,25 @@
+//Todo
+//Ta isws na min xreiazetai na xana ftiaxw threads gia to hash tables
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
 #include <unistd.h>
+#include <time.h>
+
 #include "concurrent_dll.h"
 #include "concurrent_ht.h"
+#include "concurrent_stack.h"
 
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
 #define KWHT  "\x1B[37m"
 
 /*Shared Variables*/
-struct DoubleLinkedList *product_dll;
-struct HTNode           ***consumer_hash_tables;
+struct DoubleLinkedList *product_dll;            /**a double linked list*/
+struct HTNode           ***consumer_hash_tables; /*a table of hash tables*/
+struct Stack            *stack;
 
 /*Function Declarations*/
 void* insertAllProductsAtList(void* thread_producer_data);
@@ -21,6 +28,8 @@ void HTVerification(int N);
 struct HTNode*** init_consumer_hash_tables(int consumers_size, int ht_size);
 void* insertAllProductsAtHashTable(void* thread_data);
 void printAllHashTables(int hash_tables_number, int hash_table_size);
+void* transferBrokenProductsAtStack(void* thread_data);
+void transfer_from_ht_to_stack_verification(int N);
 
 typedef struct ThreadProducerData {
     pthread_barrier_t *product_insertion_barrier;
@@ -62,6 +71,8 @@ int main() {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
+    //printDLL(product_dll);
+
     /*----------< S e l l     P r o d u c t s >----------*/
     hash_tables_number = N/3;
     hash_table_size    = 4*N;
@@ -88,8 +99,34 @@ int main() {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
-    printDLL(product_dll);
-    printAllHashTables(hash_tables_number, hash_table_size);
+    //printDLL(product_dll);
+    //printAllHashTables(hash_tables_number, hash_table_size);
+
+    /*----------< R e p a i r     P r o d u c t s >----------*/
+    stack = createStack();
+
+    pthread_barrier_init(&product_insertion_barrier, NULL, N);
+    pthread_barrier_init(&verification_barrier, NULL, N);
+    
+    srand(time(NULL));
+
+    for(int i = 0; i < N; i++) {
+        thread_producer_data = (struct ThreadProducerData*)malloc(sizeof(struct ThreadProducerData));
+        thread_producer_data->product_insertion_barrier = &product_insertion_barrier;
+        thread_producer_data->verification_barrier      = &verification_barrier;
+        thread_producer_data->number_of_products        = N;
+        thread_producer_data->thread_id                 = i;
+        pthread_create(&producer_thread_ids[i], NULL, transferBrokenProductsAtStack, (void *)thread_producer_data);
+    }
+
+    for(int i = 0; i < N; i++) {
+        pthread_join(producer_thread_ids[i], NULL);
+    }
+
+    pthread_barrier_destroy(&product_insertion_barrier);
+    pthread_barrier_destroy(&verification_barrier);
+
+    //printStack(stack);
 }
 
 /*Creates a number (N) of products and insert them at the list*/
@@ -111,6 +148,7 @@ void* insertAllProductsAtList(void* thread_producer_data) {
     } else {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->verification_barrier);
     }
+    return NULL;
 }
 
 void* insertAllProductsAtHashTable(void* thread_data) {
@@ -133,25 +171,55 @@ void* insertAllProductsAtHashTable(void* thread_data) {
     } else {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
     }
+    return NULL;
+}
+
+void* transferBrokenProductsAtStack(void* thread_data) {
+    int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
+    int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
+    int random_product_id;
+
+    for(int i = 0; i < N/3; i++) {       
+    
+        random_product_id = rand() % (N*N);
+        while(HTDelete(consumer_hash_tables[i%(N/3)], 4*N, random_product_id) == 0) {
+            random_product_id = rand() % (N*N);
+        }
+        
+        push(stack, random_product_id);
+    }
+
+    pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
+
+    if(tid == 0) {
+        transfer_from_ht_to_stack_verification(N);
+        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+    } else {
+        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+    }
+    return NULL;
+
 }
 
 void DLLVerification(int N) {
-    int found_sum = DLLProductIdSum(product_dll);
+    long long int found_sum = DLLProductIdSum(product_dll);
+    long long int expected_sum = ((N*N)*(N*N-1))/2;
 
     printf("\n-------------------< DLL Verification >-------------------\n");
-    printf("  List sum check  (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, found_sum);
+    printf("  List sum check  (expected: %lld , found: %lld)\n\n", expected_sum, found_sum);
 
     int found_size = DLLSize(product_dll);
     printf("  List size check (expected: %d , found: %d)\n", N*N, found_size);
     
-    if(((N*N)*(N*N-1))/2 == found_sum && N*N == found_size) printf("\n\t\t%sDLL Verification Passed%s\n", KGRN, KWHT);
+    if(expected_sum == found_sum && N*N == found_size) printf("\n\t\t%sDLL Verification Passed%s\n", KGRN, KWHT);
     else printf("\n\t\t%sDLL Verification Failed%s\n", KRED, KWHT);
 
     printf("----------------------------------------------------------\n");
 }
 
 void HTVerification(int N) {
-    int total_sum = 0, ht_size_passes = 0, ht_size;
+    long long int total_sum = 0, expected_sum = ((N*N)*(N*N-1))/2;
+    int ht_size_passes = 0, ht_size;
 
     printf("\n-------------------< HT Verification >--------------------\n");
     for(int i = 0; i < N/3; i++) {
@@ -163,9 +231,30 @@ void HTVerification(int N) {
     for(int i = 0; i < N/3; i++) {
         total_sum += HTProductIDSum(consumer_hash_tables[i], 4*N);
     }
-    printf("  HT sum  check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, total_sum);
-    if(ht_size_passes == N/3 && ((N*N)*(N*N-1))/2 == total_sum) printf("\n\t\t%sHT Verification Passed%s\n", KGRN, KWHT);
+    printf("\n  HT sum  check (expected: %lld , found: %lld)\n", expected_sum, total_sum);
+    if(ht_size_passes == N/3 && expected_sum == total_sum) printf("\n\t\t%sHT Verification Passed%s\n", KGRN, KWHT);
     else printf("\n\t\t%sHT Verification Failed%s\n", KRED, KWHT);
+    printf("----------------------------------------------------------\n");
+}
+
+void transfer_from_ht_to_stack_verification(int N) {;
+    int ht_size_passes = 0, ht_size = 0, actual_stack_products = 0, expected_stack_products = (N*N)/3;
+
+    printf("\n-------------------< Stack Verification >--------------------\n");
+    for(int i = 0; i < N/3; i++) {
+        ht_size = HTSize(consumer_hash_tables[i], 4*N);
+        printf("  HT[%d] size check (expected: %d , found: %d)\n", i, 2*N, ht_size);
+        if(2*N == ht_size) ht_size_passes++;
+    }
+
+    actual_stack_products = getStackSize(stack);
+    printf("\n  Stack size check (expected: %d , found: %d)\n", expected_stack_products, actual_stack_products);
+    
+    if(ht_size_passes == N/3 && expected_stack_products == actual_stack_products) 
+        printf("\n\t\t%sStack Verification Passed%s\n", KGRN, KWHT);
+    else 
+        printf("\n\t\t%sStack Verification Failed%s\n", KRED, KWHT);
+    
     printf("----------------------------------------------------------\n");
 }
 
