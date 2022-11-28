@@ -1,6 +1,3 @@
-//TODO:
-//1. Fix HT Insertion
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -8,6 +5,10 @@
 #include <unistd.h>
 #include "concurrent_dll.h"
 #include "concurrent_ht.h"
+
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KWHT  "\x1B[37m"
 
 /*Shared Variables*/
 struct DoubleLinkedList *product_dll;
@@ -32,7 +33,7 @@ int main() {
     pthread_t          *producer_thread_ids;
     pthread_barrier_t   product_insertion_barrier, verification_barrier;
     ThreadProducerData *thread_producer_data;
-    int N;
+    int N, hash_table_size, hash_tables_number;
 
     printf("Enter N: ");
     scanf("%d", &N);
@@ -62,7 +63,10 @@ int main() {
     pthread_barrier_destroy(&verification_barrier);
 
     /*----------< S e l l     P r o d u c t s >----------*/
-    consumer_hash_tables = init_consumer_hash_tables(N/3, 4*N);
+    hash_tables_number = N/3;
+    hash_table_size    = 4*N;
+
+    consumer_hash_tables = init_consumer_hash_tables(hash_tables_number, hash_table_size);
     producer_thread_ids  = (pthread_t*)malloc(sizeof(pthread_t) * N);
 
     pthread_barrier_init(&product_insertion_barrier, NULL, N);
@@ -83,6 +87,9 @@ int main() {
 
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
+
+    printDLL(product_dll);
+    printAllHashTables(hash_tables_number, hash_table_size);
 }
 
 /*Creates a number (N) of products and insert them at the list*/
@@ -100,7 +107,6 @@ void* insertAllProductsAtList(void* thread_producer_data) {
 
     if(tid == 0) {
         DLLVerification(N);
-        printDLL(product_dll);
         pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->verification_barrier);
     } else {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->verification_barrier);
@@ -131,23 +137,36 @@ void* insertAllProductsAtHashTable(void* thread_data) {
 
 void DLLVerification(int N) {
     int found_sum = DLLProductIdSum(product_dll);
-    printf("List sum check  (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, found_sum);
+
+    printf("\n-------------------< DLL Verification >-------------------\n");
+    printf("  List sum check  (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, found_sum);
 
     int found_size = DLLSize(product_dll);
-    printf("List size check (expected: %d , found: %d)\n", N*N, found_size);
+    printf("  List size check (expected: %d , found: %d)\n", N*N, found_size);
+    
+    if(((N*N)*(N*N-1))/2 == found_sum && N*N == found_size) printf("\n\t\t%sDLL Verification Passed%s\n", KGRN, KWHT);
+    else printf("\n\t\t%sDLL Verification Failed%s\n", KRED, KWHT);
+
+    printf("----------------------------------------------------------\n");
 }
 
 void HTVerification(int N) {
-    int total_sum = 0;
+    int total_sum = 0, ht_size_passes = 0, ht_size;
 
+    printf("\n-------------------< HT Verification >--------------------\n");
     for(int i = 0; i < N/3; i++) {
-        printf("HT[%d] size check (expected: %d , found: %d)\n", i, 3*N, HTSize(consumer_hash_tables[i], 4*N));
+        ht_size = HTSize(consumer_hash_tables[i], 4*N);
+        printf("  HT[%d] size check (expected: %d , found: %d)\n", i, 3*N, ht_size);
+        if(3*N == ht_size) ht_size_passes++;
     }
 
     for(int i = 0; i < N/3; i++) {
         total_sum += HTProductIDSum(consumer_hash_tables[i], 4*N);
     }
-    printf("HT    sum  check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, total_sum);
+    printf("  HT sum  check (expected: %d , found: %d)\n", ((N*N)*(N*N-1))/2, total_sum);
+    if(ht_size_passes == N/3 && ((N*N)*(N*N-1))/2 == total_sum) printf("\n\t\t%sHT Verification Passed%s\n", KGRN, KWHT);
+    else printf("\n\t\t%sHT Verification Failed%s\n", KRED, KWHT);
+    printf("----------------------------------------------------------\n");
 }
 
 struct HTNode*** init_consumer_hash_tables(int hash_tables_number, int ht_size) {
@@ -162,6 +181,7 @@ struct HTNode*** init_consumer_hash_tables(int hash_tables_number, int ht_size) 
 }
 
 void printAllHashTables(int hash_tables_number, int hash_table_size) {
+    printf("\n");
     for(int i = 0; i < hash_tables_number; i++) {
         printf("Hash Table %d\n", i);
         printHT(consumer_hash_tables[i], hash_table_size);

@@ -195,6 +195,6 @@ int HTProductIDSum(struct HTNode** hash_table, int size) {
 
 void printHT(struct HTNode** hash_table, int size) {
     for(int i = 0; i < size; i++) {
-        printf("%d[%d]\n", i, hash_table[i]->productID);
+        printf("[%d] = %d\n", i, hash_table[i]->productID);
     }
 }
