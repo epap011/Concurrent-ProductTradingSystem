@@ -115,6 +115,7 @@ void* insertAllProductsAtHashTable(void* thread_data) {
     for(int i = 0; i < N; i++) {
         product = createHTNode(tid*N+i);
         HTInsert(consumer_hash_tables[j%(N/3)], 4*N, product);
+        listDelete(product_dll, product->productID);
         j++;
     }
 
@@ -122,7 +123,6 @@ void* insertAllProductsAtHashTable(void* thread_data) {
 
     if(tid == 0) {
         HTVerification(N);
-        //printAllHashTables(N/3, 4*N);
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
     } else {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
