@@ -12,6 +12,8 @@
 #include "concurrent_ht.h"
 #include "concurrent_stack.h"
 
+#define DEBUG 0
+
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
 #define KWHT  "\x1B[37m"
@@ -22,6 +24,8 @@ struct HTNode           ***consumer_hash_tables; /* a table of hash tables */
 struct Stack            *stack;                  /* a stack                */
 
 /*----< Function Declarations >---*/
+void* playDifferentRoles(void* thread_data);
+
 void* produceProducts(void* thread_producer_data);
 void* sellProducts(void* thread_data);
 void* detectBrokenProducts(void* thread_data);
@@ -78,7 +82,7 @@ int main() {
     pthread_barrier_destroy(&verification_barrier);
 
     /*DEBUG PRINT*/
-    printDLL(product_dll);
+    if(DEBUG) printDLL(product_dll);
 
     /*----------< S e l l     P r o d u c t s >----------*/
     /*---------------------------------------------------*/
@@ -108,8 +112,10 @@ int main() {
     pthread_barrier_destroy(&verification_barrier);
 
     /*DEBUG PRINTS*/
-    printDLL(product_dll);
-    printAllHashTables(hash_tables_number, hash_table_size);
+    if(DEBUG) {
+        printDLL(product_dll);
+        printAllHashTables(hash_tables_number, hash_table_size);
+    }
 
     /*----------< B r o k e n     P r o d u c t s >----------*/
     /*-------------------------------------------------------*/
@@ -137,7 +143,7 @@ int main() {
     pthread_barrier_destroy(&verification_barrier);
 
     /*DEBUG PRINT*/
-    printStack(stack);
+    if(DEBUG) printStack(stack);
 
     /*----------< R e p a i r     P r o d u c t s >----------*/
     /*-------------------------------------------------------*/
@@ -161,8 +167,15 @@ int main() {
     pthread_barrier_destroy(&verification_barrier);
 
     /*DEBUG PRINTS*/
-    printStack(stack);
-    printDLL(product_dll);
+    if(DEBUG) {
+        printStack(stack);
+        printDLL(product_dll);
+    }
+
+}
+
+void* playDifferentRoles(void* thread_data) {
+    return NULL;
 }
 
 /*Creates a number (N) of products and insert them at the list*/
@@ -220,7 +233,8 @@ void* detectBrokenProducts(void* thread_data) {
         random_product_id = rand() % (N*N);
         while(HTDelete(consumer_hash_tables[i%(N/3)], 4*N, random_product_id) == 0) {
             random_product_id = rand() % (N*N);
-        }   
+            printf("DETECT WHILE\n");
+        }  
         push(stack, random_product_id);
     }
 
@@ -233,7 +247,6 @@ void* detectBrokenProducts(void* thread_data) {
         pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
     }
     return NULL;
-
 }
 
 void* repairBrokenProducts(void* thread_data) {
@@ -243,10 +256,11 @@ void* repairBrokenProducts(void* thread_data) {
     struct DLLNode *repaired_product;
 
     broken_product_id = pop(stack);
-    while(broken_product_id != 0) {
+    while(broken_product_id != -2) { //-2 means empty_stack
         repaired_product = createDLLNode(broken_product_id);
         listInsert(product_dll, repaired_product);
         broken_product_id = pop(stack);
+        printf("REPAIR WHILE - broken id: %d \n", broken_product_id);
     }
 
     pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
@@ -292,7 +306,7 @@ void verifySoldProducts(int N) {
     printf("----------------------------------------------------------\n");
 }
 
-void verifyBrokenProducts(int N) {;
+void verifyBrokenProducts(int N) {
     int ht_size_passes = 0, ht_size = 0, actual_stack_products = 0, expected_stack_products = (N*N)/3;
 
     printf("\n-------------------< Stack Verification >--------------------\n");
@@ -319,7 +333,7 @@ void verifyRepairedProducts(int N) {
     printf("\n-------------------< DLL Verification >--------------------\n");
     printf("  List size check (expected: %d , found: %d)\n", (N*N)/3, found_size);
     
-    if((N*N)/3 == found_size) 
+    if((N*N)/3 == found_size)
         printf("\n\t%s  Repaired Products Verification Succeded%s\n", KGRN, KWHT);
     else 
         printf("\n\t%s  Repaired Products Verification Failed%s\n", KRED, KWHT);

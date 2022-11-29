@@ -59,10 +59,10 @@ int tryPush(struct Stack *stack, struct StackNode *stack_node) {
             stack_node->next = stack->top;
             stack->top       = stack_node;
             stack->stack_size++;
-            if(pthread_mutex_unlock(&stack->lock) != 0) {
-                perror("Error: pthread_mutex_unlock failed!");
-                exit(1);
-            }
+        }
+        if(pthread_mutex_unlock(&stack->lock) != 0) {
+            perror("Error: pthread_mutex_unlock failed!");
+            exit(1);
         }
         return 1;
     }
@@ -75,31 +75,36 @@ int pop(struct Stack *stack) {
 
     while(1) {
         stack_node = tryPop(stack);
-        if(stack_node == NULL) break; //empty stack
+        if(stack_node == NULL) continue;
+        if(stack_node->productID == -1) break; //empty stack
         else return stack_node->productID;
         //else Backoff(MIN, MAX);
     }
     
-    return 0;
+    return -2;
 }
 
 struct StackNode* tryPop(struct Stack *stack) {
     struct StackNode *old_top = stack->top;
     struct StackNode *new_top;
 
-    if(old_top->productID == -1) return NULL;
+    if(old_top->productID == -1) return old_top;
     
     new_top = old_top->next;
 
     if(pthread_mutex_trylock(&stack->lock) == 0) {
         if(old_top == stack->top) {
-            stack->top       = new_top;
+            stack->top = new_top;
             stack->stack_size--;
             if(pthread_mutex_unlock(&stack->lock) != 0) {
                 perror("Error: pthread_mutex_unlock failed!");
                 exit(1);
             }
             return old_top;
+        }
+        if(pthread_mutex_unlock(&stack->lock) != 0) {
+            perror("Error: pthread_mutex_unlock failed!");
+            exit(1);
         }
     }
 
