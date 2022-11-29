@@ -1,8 +1,6 @@
-//Todo
-//Ta isws na min xreiazetai na xana ftiaxw threads gia to hash tables
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
 #include <assert.h>
 #include <unistd.h>
@@ -17,11 +15,16 @@
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
 #define KWHT  "\x1B[37m"
+#define KCYN  "\x1B[36m"
+#define KMAG  "\x1B[35m"
 
 /*---< Shared Variables >---*/
 struct DoubleLinkedList *product_dll;            /* a double linked list   */
 struct HTNode           ***consumer_hash_tables; /* a table of hash tables */
 struct Stack            *stack;                  /* a stack                */
+
+int DEBUG_MODE = 0;
+pthread_mutex_t debug_lock;
 
 /*----< Function Declarations >---*/
 void* playDifferentRoles(void* thread_data);
@@ -39,7 +42,6 @@ void verifyRepairedProducts(int N);
 struct HTNode*** init_consumer_hash_tables(int consumers_size, int ht_size);
 void printAllHashTables(int hash_tables_number, int hash_table_size);
 
-
 typedef struct ThreadProducerData {
     pthread_barrier_t *product_insertion_barrier;
     pthread_barrier_t *verification_barrier;
@@ -47,20 +49,51 @@ typedef struct ThreadProducerData {
     int thread_id;
 }ThreadProducerData;
 
-int main() {
+int main(int argc, char *argv[]) {
     pthread_t          *producer_thread_ids;
     pthread_barrier_t   product_insertion_barrier, verification_barrier;
     ThreadProducerData *thread_producer_data;
     int N, hash_table_size, hash_tables_number;
 
-    printf("Enter N: ");
-    scanf("%d", &N);
+    if(argc == 2) {
+        N = atoi(argv[1]);
+        if(N % 3 != 0) {
+            printf("%sN must be multiple of 3%s\n", KRED, KWHT);
+            exit(1);
+        }
+        if(N <= 0) {
+            printf("%sN must be a positive number%s\n", KRED, KWHT);
+            exit(1);
+        }
+    }
+    
+    if(argc == 3) {
+        N = atoi(argv[1]);
+        if(N % 3 != 0) {
+            printf("%sN must be multiple of 3%s\n", KRED, KWHT);
+            exit(1);
+        }
+        if(N <= 0) {
+            printf("%sN must be a positive number%s\n", KRED, KWHT);
+            exit(1);
+        }
+        if(strcmp(argv[2], "--debug_mode") == 0) {
+            DEBUG_MODE = 1;
+            if(pthread_mutex_init(&debug_lock, NULL) != 0) {                                    
+                perror("Error: pthread_mutex_init failed!");                                                       
+                exit(1);                                                                    
+            }
+        }
+        else {
+            printf("%sAs a second argument you should provide \"--debug_mode\"%s\n", KRED, KWHT);
+            exit(1);
+        } 
+    }
 
     srand(time(NULL));
 
-    /*DOUBLE LINKED LIST CREATION*/
+    /*DLL CREATION*/
     product_dll         = createDLL();
-    producer_thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
 
     /*HASH TABLE CREATION*/
     hash_tables_number = N/3;
@@ -70,9 +103,9 @@ int main() {
     /*STACK CREATION*/
     stack = createStack();
 
+    producer_thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
     pthread_barrier_init(&product_insertion_barrier, NULL, N);
     pthread_barrier_init(&verification_barrier, NULL, N);
-
     for(int i = 0; i < N; i++) {
         thread_producer_data = (struct ThreadProducerData *)malloc(sizeof(struct ThreadProducerData));
         thread_producer_data->product_insertion_barrier = &product_insertion_barrier;
@@ -91,19 +124,60 @@ int main() {
 }
 
 void* playDifferentRoles(void* thread_data) {
+    int N = ((struct ThreadProducerData*)thread_data)->number_of_products;
     
     produceProducts(thread_data);
 
+    if(DEBUG_MODE && pthread_mutex_trylock(&debug_lock) == 0) {
+        printf("%s--------------< D E B U G    M E S S A G E >--------------%s\n", KMAG, KWHT);
+        printf("[DLL after product production]\n");
+        printDLL(product_dll);
+        printf("%s----------------------------------------------------------%s\n", KMAG, KWHT);
+        pthread_mutex_unlock(&debug_lock);
+    }
+
     sellProducts(thread_data);
+
+    if(DEBUG_MODE && pthread_mutex_trylock(&debug_lock) == 0) {
+        printf("%s--------------< D E B U G    M E S S A G E >--------------%s\n", KMAG, KWHT);
+        printf("*DLL after product sale*\n");
+        printDLL(product_dll);
+
+        printf("*Hash Tables after product sale*\n");
+        printAllHashTables(N/3, 4*N);
+        printf("%s----------------------------------------------------------%s\n", KMAG, KWHT);
+        pthread_mutex_unlock(&debug_lock);
+    }
 
     detectBrokenProducts(thread_data);
 
+    if(DEBUG_MODE && pthread_mutex_trylock(&debug_lock) == 0) {
+        printf("%s--------------< D E B U G    M E S S A G E >--------------%s\n", KMAG, KWHT);
+        printf("*Hash Tables after product sale*\n");
+        printAllHashTables(N/3, 4*N);
+
+        printf("*Stack after broken product detection*\n");
+        printStack(stack);
+        printf("%s----------------------------------------------------------%s\n", KMAG, KWHT);
+        pthread_mutex_unlock(&debug_lock);
+    }
+
     repairBrokenProducts(thread_data);
+
+    if(DEBUG_MODE && pthread_mutex_trylock(&debug_lock) == 0) {
+        printf("%s--------------< D E B U G    M E S S A G E >--------------%s\n", KMAG, KWHT);
+        printf("\t*Stack after repair of products*\n");
+        printStack(stack);
+
+        printf("\t*DLL after repair of products*\n");
+        printDLL(product_dll);
+        printf("%s----------------------------------------------------------%s\n", KMAG, KWHT);
+        pthread_mutex_unlock(&debug_lock);
+    }
 
     return NULL;
 }
 
-/*Creates a number (N) of products and insert them at the list*/
 void* produceProducts(void* thread_producer_data) {
     int N   = ((struct ThreadProducerData*)thread_producer_data)->number_of_products;
     int tid = ((struct ThreadProducerData*)thread_producer_data)->thread_id;
@@ -158,7 +232,7 @@ void* detectBrokenProducts(void* thread_data) {
         random_product_id = rand() % (N*N);
         while(HTDelete(consumer_hash_tables[i%(N/3)], 4*N, random_product_id) == 0) {
             random_product_id = rand() % (N*N);
-        }  
+        }
         push(stack, random_product_id);
     }
 
@@ -197,7 +271,7 @@ void verifyProducedProducts(int N) {
     long long int found_sum = DLLProductIdSum(product_dll);
     long long int expected_sum = ((N*N)*(N*N-1))/2;
 
-    printf("\n-------------------< DLL Verification >-------------------\n");
+    printf("\n%s------------------------< DLL Verification >-----------------------%s\n", KCYN, KWHT);
     printf("  List sum check  (expected: %lld , found: %lld)\n\n", expected_sum, found_sum);
 
     int found_size = DLLSize(product_dll);
@@ -206,14 +280,14 @@ void verifyProducedProducts(int N) {
     if(expected_sum == found_sum && N*N == found_size) printf("\n\t%s  Produced Products Verification Succeded%s\n", KGRN, KWHT);
     else printf("\n\t%s  Produced Products Verification Failed%s\n", KRED, KWHT);
 
-    printf("----------------------------------------------------------\n");
+    printf("%s-------------------------------------------------------------------%s\n\n", KCYN, KWHT);
 }
 
 void verifySoldProducts(int N) {
     long long int total_sum = 0, expected_sum = ((N*N)*(N*N-1))/2;
     int ht_size_passes = 0, ht_size;
 
-    printf("\n-------------------< HT Verification >--------------------\n");
+    printf("\n%s-------------------< DLL -> HT Verification >----------------------%s\n", KCYN, KWHT);
     for(int i = 0; i < N/3; i++) {
         ht_size = HTSize(consumer_hash_tables[i], 4*N);
         printf("  HT[%d] size check (expected: %d , found: %d)\n", i, 3*N, ht_size);
@@ -226,13 +300,13 @@ void verifySoldProducts(int N) {
     printf("\n  HT sum  check (expected: %lld , found: %lld)\n", expected_sum, total_sum);
     if(ht_size_passes == N/3 && expected_sum == total_sum) printf("\n\t%s  Sold Products Verification Succeded%s\n", KGRN, KWHT);
     else printf("\n\t%s  Sold Products Verification Failed%s\n", KRED, KWHT);
-    printf("----------------------------------------------------------\n");
+    printf("%s-------------------------------------------------------------------%s\n\n", KCYN, KWHT);
 }
 
 void verifyBrokenProducts(int N) {
     int ht_size_passes = 0, ht_size = 0, actual_stack_products = 0, expected_stack_products = (N*N)/3;
 
-    printf("\n-------------------< Stack Verification >--------------------\n");
+    printf("\n%s-------------------< HT -> Stack Verification >--------------------%s\n", KCYN, KWHT);
     for(int i = 0; i < N/3; i++) {
         ht_size = HTSize(consumer_hash_tables[i], 4*N);
         printf("  HT[%d] size check (expected: %d , found: %d)\n", i, 2*N, ht_size);
@@ -247,13 +321,13 @@ void verifyBrokenProducts(int N) {
     else 
         printf("\n\t%s  Broken Products Verification Failed%s\n", KRED, KWHT);
     
-    printf("----------------------------------------------------------\n");
+    printf("%s-------------------------------------------------------------------%s\n\n", KCYN, KWHT);
 }
 
 void verifyRepairedProducts(int N) {
     int found_size = DLLSize(product_dll);
     
-    printf("\n-------------------< DLL Verification >--------------------\n");
+    printf("\n%s-------------------< STACK -> DLL Verification >-------------------%s\n", KCYN, KWHT);
     printf("  List size check (expected: %d , found: %d)\n", (N*N)/3, found_size);
     
     if((N*N)/3 == found_size)
@@ -261,7 +335,7 @@ void verifyRepairedProducts(int N) {
     else 
         printf("\n\t%s  Repaired Products Verification Failed%s\n", KRED, KWHT);
     
-    printf("----------------------------------------------------------\n");
+    printf("%s-------------------------------------------------------------------%s\n\n", KCYN, KWHT);
 }
 
 struct HTNode*** init_consumer_hash_tables(int hash_tables_number, int ht_size) {

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define MAX_STACK_SIZE 1000
+#define MAX_STACK_SIZE 100000
 
 struct Stack* createStack() {
     struct Stack* stack = (struct Stack*)malloc(sizeof(struct Stack));
@@ -54,7 +54,7 @@ int tryPush(struct Stack *stack, struct StackNode *stack_node) {
     struct StackNode *old_top = stack->top;
     stack_node->next = old_top;
 
-    if(pthread_mutex_trylock(&stack->lock) == 0) {
+    if(pthread_mutex_lock(&stack->lock) == 0) {
         if(old_top == stack->top) {
             stack_node->next = stack->top;
             stack->top       = stack_node;
@@ -92,7 +92,7 @@ struct StackNode* tryPop(struct Stack *stack) {
     
     new_top = old_top->next;
 
-    if(pthread_mutex_trylock(&stack->lock) == 0) {
+    if(pthread_mutex_lock(&stack->lock) == 0) {
         if(old_top == stack->top) {
             stack->top = new_top;
             stack->stack_size--;

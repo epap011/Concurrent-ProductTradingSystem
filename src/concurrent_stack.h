@@ -21,6 +21,7 @@ int isFull(struct Stack *stack);
 int isEmpty(struct Stack *stack);
 void printStack(struct Stack *stack);
 int getStackSize(struct Stack *stack);
+int computeStackSize(struct Stack *stack);
 
 int tryPush(struct Stack *stack, struct StackNode *stack_node);
 struct StackNode* tryPop(struct Stack *stack);
