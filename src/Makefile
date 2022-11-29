@@ -1,14 +1,14 @@
-/**********************************/
-/* @author Papageorgiou Efthymios */
-/* @version v.1                   */
-/**********************************/
+####################################
+# @author Papageorgiou Efthymios   #
+# @version v.1                     #
+####################################
 
 #Compiler
 CC = gcc
 #compiler flags
 CFLAGS = -Wall
 
-exec: main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o
+build: main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o
 	$(CC) $(CFLAGS) main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o -o a.out
 
 main.o:	main.c
