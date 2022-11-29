@@ -30,6 +30,8 @@ void* insertAllProductsAtHashTable(void* thread_data);
 void printAllHashTables(int hash_tables_number, int hash_table_size);
 void* transferBrokenProductsAtStack(void* thread_data);
 void transfer_from_ht_to_stack_verification(int N);
+void transfer_from_stack_to_dll_verification(int N);
+void* repairBrokenProducts(void* thread_data);
 
 typedef struct ThreadProducerData {
     pthread_barrier_t *product_insertion_barrier;
@@ -48,6 +50,7 @@ int main() {
     scanf("%d", &N);
 
     /*----------< P r o d u c e     P r o d u c t s >----------*/
+    /*-------------------------------------------------------*/
     product_dll         = createDLL();
     producer_thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
 
@@ -71,9 +74,11 @@ int main() {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
-    //printDLL(product_dll);
+    /*DEBUG PRINT*/
+    printDLL(product_dll);
 
     /*----------< S e l l     P r o d u c t s >----------*/
+    /*---------------------------------------------------*/
     hash_tables_number = N/3;
     hash_table_size    = 4*N;
 
@@ -99,10 +104,12 @@ int main() {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
-    //printDLL(product_dll);
-    //printAllHashTables(hash_tables_number, hash_table_size);
+    /*DEBUG PRINTS*/
+    printDLL(product_dll);
+    printAllHashTables(hash_tables_number, hash_table_size);
 
-    /*----------< R e p a i r     P r o d u c t s >----------*/
+    /*----------< B r o k e n     P r o d u c t s >----------*/
+    /*-------------------------------------------------------*/
     stack = createStack();
 
     pthread_barrier_init(&product_insertion_barrier, NULL, N);
@@ -126,7 +133,33 @@ int main() {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
-    //printStack(stack);
+    /*DEBUG PRINT*/
+    printStack(stack);
+
+    /*----------< R e p a i r     P r o d u c t s >----------*/
+    /*-------------------------------------------------------*/
+    pthread_barrier_init(&product_insertion_barrier, NULL, N);
+    pthread_barrier_init(&verification_barrier, NULL, N);
+
+    for(int i = 0; i < N; i++) {
+        thread_producer_data = (struct ThreadProducerData*)malloc(sizeof(struct ThreadProducerData));
+        thread_producer_data->product_insertion_barrier = &product_insertion_barrier;
+        thread_producer_data->verification_barrier      = &verification_barrier;
+        thread_producer_data->number_of_products        = N;
+        thread_producer_data->thread_id                 = i;
+        pthread_create(&producer_thread_ids[i], NULL, repairBrokenProducts, (void *)thread_producer_data);
+    }
+
+    for(int i = 0; i < N; i++) {
+        pthread_join(producer_thread_ids[i], NULL);
+    }
+
+    pthread_barrier_destroy(&product_insertion_barrier);
+    pthread_barrier_destroy(&verification_barrier);
+
+    /*DEBUG PRINTS*/
+    printStack(stack);
+    printDLL(product_dll);
 }
 
 /*Creates a number (N) of products and insert them at the list*/
@@ -184,8 +217,7 @@ void* transferBrokenProductsAtStack(void* thread_data) {
         random_product_id = rand() % (N*N);
         while(HTDelete(consumer_hash_tables[i%(N/3)], 4*N, random_product_id) == 0) {
             random_product_id = rand() % (N*N);
-        }
-        
+        }   
         push(stack, random_product_id);
     }
 
@@ -199,6 +231,26 @@ void* transferBrokenProductsAtStack(void* thread_data) {
     }
     return NULL;
 
+}
+
+void* repairBrokenProducts(void* thread_data) {
+    int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
+    int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
+    int broken_product_id;
+    struct DLLNode *repaired_product;
+
+    broken_product_id = pop(stack);
+    while(broken_product_id != 0) {
+        repaired_product = createDLLNode(broken_product_id);
+        listInsert(product_dll, repaired_product);
+        broken_product_id = pop(stack);
+    }
+
+    pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
+    if(tid == 0) {
+        transfer_from_stack_to_dll_verification(N);
+    }
+    return NULL;
 }
 
 void DLLVerification(int N) {
@@ -254,6 +306,20 @@ void transfer_from_ht_to_stack_verification(int N) {;
         printf("\n\t\t%sStack Verification Passed%s\n", KGRN, KWHT);
     else 
         printf("\n\t\t%sStack Verification Failed%s\n", KRED, KWHT);
+    
+    printf("----------------------------------------------------------\n");
+}
+
+void transfer_from_stack_to_dll_verification(int N) {
+    int found_size = DLLSize(product_dll);
+    
+    printf("\n-------------------< DLL Verification >--------------------\n");
+    printf("  List size check (expected: %d , found: %d)\n", (N*N)/3, found_size);
+    
+    if((N*N)/3 == found_size) 
+        printf("\n\t\t%sDLL Verification Passed%s\n", KGRN, KWHT);
+    else 
+        printf("\n\t\t%sDLL Verification Failed%s\n", KRED, KWHT);
     
     printf("----------------------------------------------------------\n");
 }

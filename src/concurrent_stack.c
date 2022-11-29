@@ -58,16 +58,52 @@ int tryPush(struct Stack *stack, struct StackNode *stack_node) {
         if(old_top == stack->top) {
             stack_node->next = stack->top;
             stack->top       = stack_node;
+            stack->stack_size++;
             if(pthread_mutex_unlock(&stack->lock) != 0) {
                 perror("Error: pthread_mutex_unlock failed!");
                 exit(1);
             }
-            stack->stack_size++;
         }
         return 1;
     }
 
     return 0;
+}
+
+int pop(struct Stack *stack) {
+    struct StackNode *stack_node;
+
+    while(1) {
+        stack_node = tryPop(stack);
+        if(stack_node == NULL) break; //empty stack
+        else return stack_node->productID;
+        //else Backoff(MIN, MAX);
+    }
+    
+    return 0;
+}
+
+struct StackNode* tryPop(struct Stack *stack) {
+    struct StackNode *old_top = stack->top;
+    struct StackNode *new_top;
+
+    if(old_top->productID == -1) return NULL;
+    
+    new_top = old_top->next;
+
+    if(pthread_mutex_trylock(&stack->lock) == 0) {
+        if(old_top == stack->top) {
+            stack->top       = new_top;
+            stack->stack_size--;
+            if(pthread_mutex_unlock(&stack->lock) != 0) {
+                perror("Error: pthread_mutex_unlock failed!");
+                exit(1);
+            }
+            return old_top;
+        }
+    }
+
+    return NULL;
 }
 
 int getStackSize(struct Stack *stack) {
