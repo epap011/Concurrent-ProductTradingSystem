@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #ifndef CONCURRENT_DLL_H
 #define CONCURRENT_DLL_H
 #include <pthread.h>

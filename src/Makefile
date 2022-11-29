@@ -1,4 +1,7 @@
-#Author: Efthymis Papageorgiou 4340
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
 
 #Compiler
 CC = gcc

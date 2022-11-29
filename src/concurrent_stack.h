@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #ifndef CONCURRENT_STACK_H
 #define CONCURRENT_STACK_H
 #include <pthread.h>

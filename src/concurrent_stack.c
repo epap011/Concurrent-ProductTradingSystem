@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #include "concurrent_stack.h"
 #include <stdio.h>
 #include <stdlib.h>

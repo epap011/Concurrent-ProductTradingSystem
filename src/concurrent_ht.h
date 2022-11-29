@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #ifndef CONCURRENT_HT_H
 #define CONCURRENT_HT_H
 #include <pthread.h>

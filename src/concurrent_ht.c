@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #include "concurrent_ht.h"
 #include <assert.h>
 #include <stdlib.h>

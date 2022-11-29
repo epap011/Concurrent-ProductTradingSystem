@@ -1,3 +1,8 @@
+/**********************************/
+/* @author Papageorgiou Efthymios */
+/* @version v.1                   */
+/**********************************/
+
 #include "concurrent_dll.h"
 #include <pthread.h>
 #include <stdlib.h>
