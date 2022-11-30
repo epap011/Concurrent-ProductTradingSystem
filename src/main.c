@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
 
     destroyAllListNodesMutexes(product_dll);
     destroyAllHashTableMutexes(N/3, 4*N);
+    destroyStackMutexe(stack);
 }
 
 void* playDifferentRoles(void* thread_data) {

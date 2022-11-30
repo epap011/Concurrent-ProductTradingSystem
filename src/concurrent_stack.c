@@ -136,3 +136,10 @@ void printStack(struct Stack *stack) {
     }
     printf("\n");
 }
+
+void destroyStackMutexe(struct Stack *stack) {
+    if (pthread_mutex_destroy(&stack->lock) == -1) {                                     
+        perror("pthread_mutex_destroy() error");                                    
+        exit(2);                                                                    
+    }
+}
