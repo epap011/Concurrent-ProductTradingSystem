@@ -16,7 +16,7 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* buc
 int HTDelete(struct HTNode** hash_table, int hash_table_size, int productID);
 int HTSearch(struct HTNode** hash_table, int hash_table_size, int productID);
 int HTSize(struct HTNode** hash_table, int size);
-long long int HTProductIDSum(struct HTNode** hash_table, int size);
+long int HTProductIDSum(struct HTNode** hash_table, int size);
 void printHT(struct HTNode** hash_table, int size);
 struct HTNode** createHT(int size);
 struct HTNode* createHTNode(int productID);

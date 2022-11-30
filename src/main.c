@@ -299,7 +299,7 @@ void verifyProducedProducts(int N) {
 }
 
 void verifySoldProducts(int N) {
-    long long int total_sum = 0, expected_sum = ((N*N)*(N*N-1))/2;
+    long int total_sum = 0, expected_sum = ((N*N)*(N*N-1))/2;
     int ht_size_passes = 0, ht_size;
 
     printf("\n%s-------------------< DLL -> HT Verification >----------------------%s\n", KCYN, KWHT);
@@ -312,7 +312,7 @@ void verifySoldProducts(int N) {
     for(int i = 0; i < N/3; i++) {
         total_sum += HTProductIDSum(consumer_hash_tables[i], 4*N);
     }
-    printf("\n  HT sum  check (expected: %lld , found: %lld)\n", expected_sum, total_sum);
+    printf("\n  HT sum  check (expected: %ld , found: %ld)\n", expected_sum, total_sum);
     if(ht_size_passes == N/3 && expected_sum == total_sum) printf("\n\t%s  Sold Products Verification Succeded%s\n", KGRN, KWHT);
     else printf("\n\t%s  Sold Products Verification Failed%s\n", KRED, KWHT);
     printf("%s-------------------------------------------------------------------%s\n\n", KCYN, KWHT);

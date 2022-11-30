@@ -30,11 +30,14 @@ command: make clean
 # Recommendations #
 ###################
 
-If debug_mode occurs it is highly recommended to give
+1. If debug_mode occurs it is highly recommended to give
 a small number of N(3, 6, 9) because bigger numbers
 produce too much information(chaos).If you enter a bigger N(>15)
 be sure to increase the maximum number of lines that terminal keeps
 in its buffer.In most cases default is something like 10000 lines.
+
+2. Inputs bigger than 216 produce wrap around at the sum of integers.
+   But for N = 213 there is no wrap around :)
 
 
 
