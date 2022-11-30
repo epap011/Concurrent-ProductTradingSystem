@@ -58,7 +58,7 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_
             hash_table[curr]->productID = key;
             key = tmp;
 
-            if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
+            if(prev != -1 && pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
                 perror("Error: pthread_mutex_lock failed!");
                 exit(1);
             }
@@ -67,6 +67,7 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_
                 exit(1);
             }
 
+            prev = -1;
             curr = hash_function(key, hash_table_size, 0);    
             
             if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
