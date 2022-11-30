@@ -64,12 +64,17 @@ int tryPush(struct Stack *stack, struct StackNode *stack_node) {
             stack_node->next = stack->top;
             stack->top       = stack_node;
             stack->stack_size++;
+            if(pthread_mutex_unlock(&stack->lock) != 0) {
+                perror("Error: pthread_mutex_unlock failed!");
+                exit(1);
+            }
+            return 1;
         }
-        if(pthread_mutex_unlock(&stack->lock) != 0) {
-            perror("Error: pthread_mutex_unlock failed!");
-            exit(1);
-        }
-        return 1;
+        
+    }
+    if(pthread_mutex_unlock(&stack->lock) != 0) {
+        perror("Error: pthread_mutex_unlock failed!");
+        exit(1);
     }
 
     return 0;
