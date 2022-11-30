@@ -114,9 +114,8 @@ int HTDelete(struct HTNode** hash_table, int hash_table_size, int productID) {
     collision_counter = 1;
     visit_counter     = 0;
     while(hash_table[curr]->productID != productID && visit_counter < hash_table_size) {
-        prev = curr;
         
-        if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
+        if(pthread_mutex_unlock(&hash_table[curr]->lock) != 0) {
             perror("Error: pthread_mutex_lock failed!");
             exit(1);
         }
@@ -138,11 +137,6 @@ int HTDelete(struct HTNode** hash_table, int hash_table_size, int productID) {
     }
 
     if(pthread_mutex_unlock(&hash_table[curr]->lock) != 0) {
-        perror("Error: pthread_mutex_lock failed!");
-        exit(1);
-    }
-
-    if(prev != -1 && pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
         perror("Error: pthread_mutex_lock failed!");
         exit(1);
     }
