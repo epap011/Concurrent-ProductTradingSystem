@@ -50,10 +50,7 @@ in its buffer.In most cases default is something like 10000 lines.
 # Additional Notes #
 ####################
 
-1.fast re-runs with N of Ω(180) the program may trigger the following 
-assertion "pthread_mutex_lock.c:94: _pthread_mutex_lock: Assertion `mutex->data.__owner == 0' failed"
-
-2. Hash table is implemented with:
+1. Hash table is implemented with:
    1.Double Hasing
    2.Ordered Hashing
    3.Open Addressing

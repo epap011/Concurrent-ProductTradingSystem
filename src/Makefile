@@ -6,7 +6,7 @@
 #Compiler
 CC = gcc
 #compiler flags
-CFLAGS = -Wall
+CFLAGS = -Wall -pthread
 
 build: main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o
 	$(CC) $(CFLAGS) main.o concurrent_dll.o concurrent_ht.o concurrent_stack.o -o a.out

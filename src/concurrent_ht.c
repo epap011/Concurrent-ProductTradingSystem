@@ -103,7 +103,7 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, int key) {
 }
 
 int HTDelete(struct HTNode** hash_table, int hash_table_size, int productID) {
-    int prev = -1, curr, collision_counter, visit_counter, result;
+    int curr, collision_counter, visit_counter, result;
 
     curr = hash_function(productID, hash_table_size, 0);    
     if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
