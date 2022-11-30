@@ -231,12 +231,25 @@ void* detectBrokenProducts(void* thread_data) {
     int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
     int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
     int random_product_id;
+    int *detected_products;
+
+    detected_products = (int*) malloc(sizeof(int) * (N*N));
+    for(int i = 0; i < N*N; i++) {
+        detected_products[i] = -1;
+    }
 
     for(int i = 0; i < N/3; i++) {       
     
         random_product_id = rand() % (N*N);
         while(HTDelete(consumer_hash_tables[i%(N/3)], 4*N, random_product_id) == 0) {
-            random_product_id = rand() % (N*N);
+            detected_products[random_product_id] = random_product_id;
+            /*In order to achieve better performance, we ensure that the produced random key is not in a hash table
+            via the detected_table which stores acts as a logger for already deleted keys.Thus, the overhead
+            of HTDelete for nonsense keys is reduced.It is time consuming for other threads too, because of locks!*/
+            do {
+                random_product_id = rand() % (N*N);
+            } while(detected_products[random_product_id] != -1);
+            
         }
         push(stack, random_product_id);
     }
