@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void swap(struct HTNode** hash_table, int index_1, int index_2);
 int hash_function(int key, int table_size, int collision_number);
 int hash_1(int key, int table_size);
 int hash_2(int key, int table_size);
@@ -38,7 +39,7 @@ struct HTNode* createHTNode(int productID) {
 
 int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_node) {
     int prev = -1, curr, collision_counter, visit_counter, result;
-    int key = ht_node->productID;
+    int key = ht_node->productID, tmp;
 
     curr = hash_function(key, hash_table_size, 0);    
     if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
@@ -50,6 +51,33 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_
     visit_counter     = 0;
     while(hash_table[curr]->productID != -1 && visit_counter < hash_table_size) {
         if(hash_table[curr]->productID == key) break;
+        
+        /*Ordered Hashing*/
+        if(hash_table[curr]->productID > key) {
+            tmp = hash_table[curr]->productID;
+            hash_table[curr]->productID = key;
+            key = tmp;
+
+            if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
+                perror("Error: pthread_mutex_lock failed!");
+                exit(1);
+            }
+            if(pthread_mutex_unlock(&hash_table[curr]->lock) != 0) {
+                perror("Error: pthread_mutex_lock failed!");
+                exit(1);
+            }
+
+            curr = hash_function(key, hash_table_size, 0);    
+            
+            if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
+                perror("Error: pthread_mutex_lock failed!");
+                exit(1);
+            }
+            collision_counter = 1;
+            visit_counter     = 0;
+            continue;
+        }
+        
         prev = curr;
         curr = hash_function(key, hash_table_size, collision_counter++);
         if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
