@@ -15,8 +15,6 @@
 #include "concurrent_ht.h"
 #include "concurrent_stack.h"
 
-#define DEBUG 0
-
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
 #define KWHT  "\x1B[37m"
@@ -47,18 +45,18 @@ void verifyRepairedProducts(int N);
 struct HTNode*** init_consumer_hash_tables(int consumers_size, int ht_size);
 void printAllHashTables(int hash_tables_number, int hash_table_size);
 
-typedef struct ThreadProducerData {
+typedef struct ThreadData {
     pthread_barrier_t *product_insertion_barrier;
     pthread_barrier_t *verification_barrier;
     int number_of_products;
     int thread_id;
-}ThreadProducerData;
+}ThreadData;
 
 int main(int argc, char *argv[]) {
-    pthread_t          *producer_thread_ids;
+    pthread_t          *thread_ids;
     pthread_barrier_t   product_insertion_barrier, verification_barrier;
-    ThreadProducerData *thread_producer_data;
-    int N, hash_table_size, hash_tables_number;
+    ThreadData *thread_data;
+    int N;
 
     if(argc == 2) {
         N = atoi(argv[1]);
@@ -98,30 +96,29 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     /*DLL CREATION*/
-    product_dll         = createDLL();
+    product_dll = createDLL();
 
     /*HASH TABLE CREATION*/
-    hash_tables_number = N/3;
-    hash_table_size    = 4*N;
-    consumer_hash_tables = init_consumer_hash_tables(hash_tables_number, hash_table_size);
+    consumer_hash_tables = init_consumer_hash_tables(N/3, 4*N);
 
     /*STACK CREATION*/
     stack = createStack();
 
-    producer_thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
+    thread_ids = (pthread_t*)malloc(sizeof(pthread_t) * N);
     pthread_barrier_init(&product_insertion_barrier, NULL, N);
     pthread_barrier_init(&verification_barrier, NULL, N);
+    
     for(int i = 0; i < N; i++) {
-        thread_producer_data = (struct ThreadProducerData *)malloc(sizeof(struct ThreadProducerData));
-        thread_producer_data->product_insertion_barrier = &product_insertion_barrier;
-        thread_producer_data->verification_barrier      = &verification_barrier;
-        thread_producer_data->number_of_products        = N;
-        thread_producer_data->thread_id                 = i;
-        pthread_create(&producer_thread_ids[i], NULL, playDifferentRoles, (void *)thread_producer_data);
+        thread_data = (struct ThreadData *)malloc(sizeof(struct ThreadData));
+        thread_data->product_insertion_barrier = &product_insertion_barrier;
+        thread_data->verification_barrier      = &verification_barrier;
+        thread_data->number_of_products        = N;
+        thread_data->thread_id                 = i;
+        pthread_create(&thread_ids[i], NULL, playDifferentRoles, (void *)thread_data);
     } 
 
     for(int i = 0; i < N; i++) {
-        pthread_join(producer_thread_ids[i], NULL);
+        pthread_join(thread_ids[i], NULL);
     }
 
     pthread_barrier_destroy(&product_insertion_barrier);
@@ -129,7 +126,7 @@ int main(int argc, char *argv[]) {
 }
 
 void* playDifferentRoles(void* thread_data) {
-    int N = ((struct ThreadProducerData*)thread_data)->number_of_products;
+    int N = ((struct ThreadData*)thread_data)->number_of_products;
     
     produceProducts(thread_data);
 
@@ -184,8 +181,8 @@ void* playDifferentRoles(void* thread_data) {
 }
 
 void* produceProducts(void* thread_producer_data) {
-    int N   = ((struct ThreadProducerData*)thread_producer_data)->number_of_products;
-    int tid = ((struct ThreadProducerData*)thread_producer_data)->thread_id;
+    int N   = ((struct ThreadData*)thread_producer_data)->number_of_products;
+    int tid = ((struct ThreadData*)thread_producer_data)->thread_id;
     struct DLLNode *product;
 
     for(int i = 0; i < N; i++) {
@@ -193,20 +190,20 @@ void* produceProducts(void* thread_producer_data) {
         listInsert(product_dll, product);
     }
 
-    pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->product_insertion_barrier);
+    pthread_barrier_wait(((struct ThreadData*)thread_producer_data)->product_insertion_barrier);
 
     if(tid == 0) {
         verifyProducedProducts(N);
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_producer_data)->verification_barrier);
     } else {
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_producer_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_producer_data)->verification_barrier);
     }
     return NULL;
 }
 
 void* sellProducts(void* thread_data) {
-    int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
-    int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
+    int N   = ((struct ThreadData*)thread_data)->number_of_products;
+    int tid = ((struct ThreadData*)thread_data)->thread_id;
     struct HTNode *product;
     int j = 0;
     for(int i = 0; i < N; i++) {
@@ -216,20 +213,20 @@ void* sellProducts(void* thread_data) {
         j++;
     }
 
-    pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
+    pthread_barrier_wait(((struct ThreadData*)thread_data)->product_insertion_barrier);
 
     if(tid == 0) {
         verifySoldProducts(N);
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_data)->verification_barrier);
     } else {
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_data)->verification_barrier);
     }
     return NULL;
 }
 
 void* detectBrokenProducts(void* thread_data) {
-    int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
-    int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
+    int N   = ((struct ThreadData*)thread_data)->number_of_products;
+    int tid = ((struct ThreadData*)thread_data)->thread_id;
     int random_product_id;
     int *detected_products;
 
@@ -254,20 +251,20 @@ void* detectBrokenProducts(void* thread_data) {
         push(stack, random_product_id);
     }
 
-    pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
+    pthread_barrier_wait(((struct ThreadData*)thread_data)->product_insertion_barrier);
 
     if(tid == 0) {
         verifyBrokenProducts(N);
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_data)->verification_barrier);
     } else {
-        pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->verification_barrier);
+        pthread_barrier_wait(((struct ThreadData*)thread_data)->verification_barrier);
     }
     return NULL;
 }
 
 void* repairBrokenProducts(void* thread_data) {
-    int N   = ((struct ThreadProducerData*)thread_data)->number_of_products;
-    int tid = ((struct ThreadProducerData*)thread_data)->thread_id;
+    int N   = ((struct ThreadData*)thread_data)->number_of_products;
+    int tid = ((struct ThreadData*)thread_data)->thread_id;
     int broken_product_id;
     struct DLLNode *repaired_product;
 
@@ -278,7 +275,7 @@ void* repairBrokenProducts(void* thread_data) {
         broken_product_id = pop(stack);
     }
 
-    pthread_barrier_wait(((struct ThreadProducerData*)thread_data)->product_insertion_barrier);
+    pthread_barrier_wait(((struct ThreadData*)thread_data)->product_insertion_barrier);
     if(tid == 0) {
         verifyRepairedProducts(N);
     }
