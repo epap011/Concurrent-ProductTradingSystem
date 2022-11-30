@@ -1,3 +1,9 @@
+###############################
+# Efthymios Papageorgiou 4340 #
+###############################
+
+----< The program works as expected !! >----
+
 ############################
 # How to build the program #
 ############################
@@ -23,7 +29,7 @@ command: make clean
 
 1. Accurate variable/function names
 2. Concurrent HashTable, DLL and Stack are reusable via their interfaces/implementations
-3. I have provide a way to reduce unessesary HTDeletions;
+3. I have provide a way to reduce unessesary HTDeletions -> better performance
 
 
 ###################
@@ -40,6 +46,15 @@ in its buffer.In most cases default is something like 10000 lines.
    But for N = 213 there is no wrap around :)
 
 
+####################
+# Additional Notes #
+####################
 
-The program works as expected, but fast re-runs with N of Ω(180) the program may trigger the following 
+1.fast re-runs with N of Ω(180) the program may trigger the following 
 assertion "pthread_mutex_lock.c:94: _pthread_mutex_lock: Assertion `mutex->data.__owner == 0' failed"
+
+2. Hash table is implemented with:
+   1.Double Hasing
+   2.Ordered Hashing
+   3.Open Addressing
+   4.No expansion
