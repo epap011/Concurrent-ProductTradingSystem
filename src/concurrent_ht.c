@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void swap(struct HTNode** hash_table, int index_1, int index_2);
 int hash_function(int key, int table_size, int collision_number);
 int hash_1(int key, int table_size);
 int hash_2(int key, int table_size);
@@ -29,17 +28,8 @@ struct HTNode** createHT(int size) {
     return hash_table;
 }
 
-struct HTNode* createHTNode(int productID) {
-    struct HTNode* ht_node = (struct HTNode*)malloc(sizeof(struct HTNode));
-    assert(ht_node != NULL);
-    ht_node->productID = productID;
-    
-    return ht_node;
-}
-
-int HTInsert(struct HTNode** hash_table, int hash_table_size, struct HTNode* ht_node) {
-    int prev = -1, curr, collision_counter, visit_counter, result;
-    int key = ht_node->productID, tmp;
+int HTInsert(struct HTNode** hash_table, int hash_table_size, int key) {
+    int prev = -1, curr, collision_counter, visit_counter, result, tmp;
 
     curr = hash_function(key, hash_table_size, 0);    
     if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
@@ -230,5 +220,14 @@ long int HTProductIDSum(struct HTNode** hash_table, int size) {
 void printHT(struct HTNode** hash_table, int size) {
     for(int i = 0; i < size; i++) {
         printf("[%d] = %d\n", i, hash_table[i]->productID);
+    }
+}
+
+void destroyAllMutexesAtHashTable(struct HTNode** hash_table, int size) {
+    for(int i = 0; i < size; i++) {
+        if (pthread_mutex_destroy(&hash_table[i]->lock) == -1) {                                     
+            perror("pthread_mutex_destroy() error");                                    
+            exit(2);                                                                    
+        }    
     }
 }

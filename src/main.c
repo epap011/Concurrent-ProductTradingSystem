@@ -44,6 +44,7 @@ void verifyRepairedProducts(int N);
 
 struct HTNode*** init_consumer_hash_tables(int consumers_size, int ht_size);
 void printAllHashTables(int hash_tables_number, int hash_table_size);
+void destroyAllHashTableMutexes(int hash_tables, int hash_table_size);
 
 typedef struct ThreadData {
     pthread_barrier_t *product_insertion_barrier;
@@ -123,6 +124,8 @@ int main(int argc, char *argv[]) {
 
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
+
+    destroyAllHashTableMutexes(N/3, 4*N);
 }
 
 void* playDifferentRoles(void* thread_data) {
@@ -204,12 +207,11 @@ void* produceProducts(void* thread_producer_data) {
 void* sellProducts(void* thread_data) {
     int N   = ((struct ThreadData*)thread_data)->number_of_products;
     int tid = ((struct ThreadData*)thread_data)->thread_id;
-    struct HTNode *product;
     int j = 0;
+
     for(int i = 0; i < N; i++) {
-        product = createHTNode(tid*N+i);
-        HTInsert(consumer_hash_tables[j%(N/3)], 4*N, product);
-        listDelete(product_dll, product->productID);
+        HTInsert(consumer_hash_tables[j%(N/3)], 4*N, tid*N+i);
+        listDelete(product_dll, tid*N+i);
         j++;
     }
 
@@ -370,5 +372,11 @@ void printAllHashTables(int hash_tables_number, int hash_table_size) {
         printf("Hash Table %d\n", i);
         printHT(consumer_hash_tables[i], hash_table_size);
         printf("\n");
+    }
+}
+
+void destroyAllHashTableMutexes(int hash_tables, int hash_table_size) {
+    for(int i = 0; i < hash_tables; i++) {
+        destroyAllMutexesAtHashTable(consumer_hash_tables[i], hash_table_size);
     }
 }
