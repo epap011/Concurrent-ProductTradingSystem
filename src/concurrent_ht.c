@@ -47,11 +47,7 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, int key) {
             tmp = hash_table[curr]->productID;
             hash_table[curr]->productID = key;
             key = tmp;
-
-            if(prev != -1 && pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
-                perror("Error: pthread_mutex_lock failed!");
-                exit(1);
-            }
+            
             if(pthread_mutex_unlock(&hash_table[curr]->lock) != 0) {
                 perror("Error: pthread_mutex_lock failed!");
                 exit(1);
@@ -64,22 +60,26 @@ int HTInsert(struct HTNode** hash_table, int hash_table_size, int key) {
                 perror("Error: pthread_mutex_lock failed!");
                 exit(1);
             }
+            prev = curr;
             collision_counter = 1;
             visit_counter     = 0;
             continue;
         }
         
         prev = curr;
+        
+        if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
+            perror("Error: pthread_mutex_lock failed!");
+            exit(1);
+        }
+
         curr = hash_function(key, hash_table_size, collision_counter++);
+
         if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
             perror("Error: pthread_mutex_lock failed!");
             exit(1);
         }
 
-        if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
-            perror("Error: pthread_mutex_lock failed!");
-            exit(1);
-        }
         visit_counter++;
     }
 
@@ -115,16 +115,19 @@ int HTDelete(struct HTNode** hash_table, int hash_table_size, int productID) {
     visit_counter     = 0;
     while(hash_table[curr]->productID != productID && visit_counter < hash_table_size) {
         prev = curr;
+        
+        if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
+            perror("Error: pthread_mutex_lock failed!");
+            exit(1);
+        }
+
         curr = hash_function(productID, hash_table_size, collision_counter++);
+
         if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
             perror("Error: pthread_mutex_lock failed!");
             exit(1);
         }
 
-        if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
-            perror("Error: pthread_mutex_lock failed!");
-            exit(1);
-        }
         visit_counter++;
     }
 
@@ -160,16 +163,19 @@ int HTSearch(struct HTNode** hash_table, int hash_table_size, int productID) {
     visit_counter     = 0;
     while(hash_table[curr]->productID != productID && visit_counter < hash_table_size) {
         prev = curr;
-        curr = hash_function(productID, hash_table_size, collision_counter++);
-        if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
-            perror("Error: pthread_mutex_lock failed!");
-            exit(1);
-        }
 
         if(pthread_mutex_unlock(&hash_table[prev]->lock) != 0) {
             perror("Error: pthread_mutex_lock failed!");
             exit(1);
         }
+
+        curr = hash_function(productID, hash_table_size, collision_counter++);
+        
+        if(pthread_mutex_lock(&hash_table[curr]->lock) != 0) {
+            perror("Error: pthread_mutex_lock failed!");
+            exit(1);
+        }
+
         visit_counter++;
     }
 
