@@ -231,3 +231,16 @@ void printDLL(struct DoubleLinkedList *dll) {
     }
     printf("\n");
 }
+
+void destroyAllListNodesMutexes(struct DoubleLinkedList *dll) {
+    struct DLLNode *curr;
+
+    curr = dll->head;
+    while(curr != NULL) {
+        if (pthread_mutex_destroy(&curr->lock) == -1) {                                     
+            perror("pthread_mutex_destroy() error");                                    
+            exit(2);                                                                    
+        }      
+        curr = curr->next;
+    }
+}

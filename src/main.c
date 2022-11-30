@@ -125,6 +125,7 @@ int main(int argc, char *argv[]) {
     pthread_barrier_destroy(&product_insertion_barrier);
     pthread_barrier_destroy(&verification_barrier);
 
+    destroyAllListNodesMutexes(product_dll);
     destroyAllHashTableMutexes(N/3, 4*N);
 }
 
